@@ -6,6 +6,7 @@ import time
 import uuid
 from typing import List, Dict, Any, Optional
 from gmail_service import clean_email_text
+from rule_engine import RuleEngine
 
 
 class TicketStore:
@@ -14,13 +15,20 @@ class TicketStore:
         self.tickets: List[Dict[str, Any]] = []
         self.seen_signatures = set()
 
+    def _sanitize_ticket(self, t: Dict[str, Any]):
+        wf = t.get("workflow", {})
+        if wf.get("queue") == "Executive Escalations (VIP)":
+            wf["queue"] = "Urgent / At Risk"
+        if "body" in t:
+            t["body"] = clean_email_text(t["body"])
+        reply = wf.get("suggested_reply", "")
+        # If reply contains broken tags like "<notifications" or single newline squishing, regenerate cleanly
+        if "<" in reply.split("\n")[0] or "\n\n" not in reply:
+            wf["suggested_reply"] = RuleEngine.regenerate_clean_reply(t)
+
     def get_all(self, queue: Optional[str] = None, priority: Optional[str] = None, lang: Optional[str] = None) -> List[Dict[str, Any]]:
         for t in self.tickets:
-            wf = t.get("workflow", {})
-            if wf.get("queue") == "Executive Escalations (VIP)":
-                wf["queue"] = "Urgent / At Risk"
-            if "body" in t:
-                t["body"] = clean_email_text(t["body"])
+            self._sanitize_ticket(t)
 
         result = self.tickets
         if queue and queue != "all":
@@ -34,11 +42,7 @@ class TicketStore:
     def get_by_id(self, ticket_id: str) -> Optional[Dict[str, Any]]:
         for t in self.tickets:
             if t["id"] == ticket_id:
-                wf = t.get("workflow", {})
-                if wf.get("queue") == "Executive Escalations (VIP)":
-                    wf["queue"] = "Urgent / At Risk"
-                if "body" in t:
-                    t["body"] = clean_email_text(t["body"])
+                self._sanitize_ticket(t)
                 return t
         return None
 
