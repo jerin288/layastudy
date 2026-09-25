@@ -81,6 +81,10 @@ class StatusUpdateRequest(BaseModel):
 class SendReplyRequest(BaseModel):
     body: str
 
+class ActionRequest(BaseModel):
+    action: str
+    item_id: Optional[int] = None
+
 class GmailConnectRequest(BaseModel):
     email: str
     app_password: str
@@ -193,6 +197,27 @@ async def send_ticket_reply(ticket_id: str, req: SendReplyRequest):
         return res
     else:
         raise HTTPException(status_code=500, detail=res.get("message", "Failed to send email."))
+
+@app.post("/api/tickets/{ticket_id}/action")
+async def execute_ticket_action(ticket_id: str, req: ActionRequest):
+    ticket = ticket_store.get_by_id(ticket_id)
+    if not ticket:
+        raise HTTPException(status_code=404, detail="Ticket not found")
+
+    if req.action == "toggle_task" and req.item_id is not None:
+        updated = ticket_store.toggle_action_item(ticket_id, req.item_id)
+    else:
+        updated = ticket_store.apply_quick_action(ticket_id, req.action)
+
+    if not updated:
+        raise HTTPException(status_code=400, detail="Action could not be applied")
+
+    await manager.broadcast({
+        "type": "TICKET_UPDATED",
+        "ticket": updated,
+        "stats": ticket_store.get_stats()
+    })
+    return {"success": True, "ticket": updated}
 
 @app.delete("/api/tickets")
 async def clear_tickets():

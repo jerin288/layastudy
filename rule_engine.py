@@ -104,6 +104,12 @@ class RuleEngine:
         # 6. Generate Canned Response Draft
         suggested_reply = RuleEngine._generate_suggested_reply(ticket_data, dept, churn_risk, refund_requested, lang)
 
+        # 7. Assigned Specialist & Action Tasks
+        assigned_specialist = answers.get("assigned_specialist")
+        action_items = answers.get("action_items", [])
+        intent = answers.get("intent", {})
+        difficulty = answers.get("difficulty", {})
+
         return {
             "priority": priority,
             "queue": queue,
@@ -111,7 +117,11 @@ class RuleEngine:
             "escalation_triggered": escalation_triggered,
             "alert_message": alert_message,
             "audit_logs": logs,
-            "suggested_reply": suggested_reply
+            "suggested_reply": suggested_reply,
+            "assigned_specialist": assigned_specialist,
+            "action_items": action_items,
+            "intent": intent,
+            "difficulty": difficulty
         }
 
     @staticmethod

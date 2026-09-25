@@ -154,6 +154,28 @@
           <span class="alert-text" id="insp-alert-text">Customer attention alert</span>
         </div>
 
+        <!-- Assigned Specialist & Quick Action Bar -->
+        <div class="specialist-intent-card">
+          <div class="specialist-info">
+            <div class="specialist-avatar" id="insp-specialist-avatar">🎧</div>
+            <div class="specialist-details">
+              <div class="specialist-name-row">
+                <span class="specialist-name" id="insp-specialist-name">Maya Patel</span>
+                <span class="specialist-badge" id="insp-specialist-role">Customer Success Specialist</span>
+              </div>
+              <div class="specialist-meta">
+                <span class="meta-item" id="insp-intent-badge">🏷️ General Inquiry</span>
+                <span class="meta-item meta-time" id="insp-difficulty-badge">⏱️ Standard (~1h)</span>
+              </div>
+            </div>
+          </div>
+          <div class="quick-actions-bar">
+            <button class="btn-quick-act" id="btn-quick-refund" title="Approve refund and update tasks">💳 Approve Refund</button>
+            <button class="btn-quick-act" id="btn-quick-escalate" title="Fast-Track to Senior Lead">⚡ Fast-Track</button>
+            <button class="btn-quick-act" id="btn-quick-archive" title="Archive without replying">🔕 Archive</button>
+          </div>
+        </div>
+
         <!-- Decision Engine Breakdown Box -->
         <div class="laya-decision-card">
           <div class="laya-decision-header">
@@ -250,6 +272,17 @@
           <div class="email-text-content" id="insp-body-text">
             Email content will appear here...
           </div>
+        </div>
+
+        <!-- Laya AI Action Checklist -->
+        <div class="action-checklist-box">
+          <div class="checklist-header">
+            <h4>📋 Laya AI Action Checklist</h4>
+            <span class="checklist-progress" id="insp-checklist-progress">0/3 Completed</span>
+          </div>
+          <ul class="checklist-items" id="insp-checklist-items">
+            <!-- Dynamically rendered interactive checkboxes -->
+          </ul>
         </div>
 
         <!-- Automated Action Audit Logs -->

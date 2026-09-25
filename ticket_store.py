@@ -26,6 +26,23 @@ class TicketStore:
         if "<" in reply.split("\n")[0] or "\n\n" not in reply:
             wf["suggested_reply"] = RuleEngine.regenerate_clean_reply(t)
 
+        triage = t.get("triage", {})
+        answers = triage.get("answers", {})
+        if not wf.get("action_items"):
+            wf["action_items"] = answers.get("action_items") or [
+                {"id": 0, "task": "Review customer request and verify account details", "done": False},
+                {"id": 1, "task": "Check system status and active records", "done": False},
+                {"id": 2, "task": "Send response and confirm resolution", "done": False}
+            ]
+        if not wf.get("assigned_specialist"):
+            wf["assigned_specialist"] = answers.get("assigned_specialist") or {
+                "name": "Maya Patel", "role": "Customer Success Specialist", "avatar": "🎧"
+            }
+        if not wf.get("intent"):
+            wf["intent"] = answers.get("intent") or {"choice": "general_inquiry", "label": "General Inquiry"}
+        if not wf.get("difficulty"):
+            wf["difficulty"] = answers.get("difficulty") or {"choice": "standard", "estimated_time": "⏱️ Standard (~1 hour)"}
+
     def get_all(self, queue: Optional[str] = None, priority: Optional[str] = None, lang: Optional[str] = None) -> List[Dict[str, Any]]:
         for t in self.tickets:
             self._sanitize_ticket(t)
@@ -75,6 +92,45 @@ class TicketStore:
             ticket["updated_at"] = time.time()
             return ticket
         return None
+
+    def toggle_action_item(self, ticket_id: str, item_id: int) -> Optional[Dict[str, Any]]:
+        ticket = self.get_by_id(ticket_id)
+        if not ticket:
+            return None
+        wf = ticket.setdefault("workflow", {})
+        items = wf.setdefault("action_items", [])
+        for item in items:
+            if item.get("id") == item_id:
+                item["done"] = not item.get("done", False)
+                break
+        ticket["updated_at"] = time.time()
+        return ticket
+
+    def apply_quick_action(self, ticket_id: str, action: str) -> Optional[Dict[str, Any]]:
+        ticket = self.get_by_id(ticket_id)
+        if not ticket:
+            return None
+        wf = ticket.setdefault("workflow", {})
+        logs = wf.setdefault("audit_logs", [])
+        
+        if action == "approve_refund":
+            logs.append(f"💳 Quick Action: Refund approved by agent ({time.strftime('%I:%M %p')})")
+            items = wf.setdefault("action_items", [])
+            for it in items:
+                if "refund" in it.get("task", "").lower() or "transaction" in it.get("task", "").lower():
+                    it["done"] = True
+            wf["refund_approved"] = True
+        elif action == "fast_track":
+            wf["priority"] = "Critical"
+            wf["escalation_triggered"] = True
+            logs.append(f"⚡ Quick Action: Fast-Tracked to senior escalation queue ({time.strftime('%I:%M %p')})")
+            wf["assigned_specialist"] = {"name": "Alex Rivera", "role": "Senior Escalations Lead", "avatar": "⚡"}
+        elif action == "archive":
+            ticket["status"] = "Archived"
+            logs.append(f"🔕 Quick Action: Ticket archived ({time.strftime('%I:%M %p')})")
+            
+        ticket["updated_at"] = time.time()
+        return ticket
 
     def clear(self):
         """Clears all tickets from memory."""

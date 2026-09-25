@@ -90,6 +90,27 @@ class TriageEngine:
             "is_phishing_or_spam": {
                 "type": "noul",
                 "instructions": "Is this email an unsolicited spam or phishing attack?"
+            },
+            "intent": {
+                "type": "choice",
+                "instructions": "What is the primary customer intent?",
+                "criteria": {
+                    "billing_dispute": "disputing charges, invoices, duplicate payments, refund requests",
+                    "bug_report": "software crashes, system errors, broken features, integration failures",
+                    "account_access": "password reset, login errors, 2FA lockout, permission issues",
+                    "sales_inquiry": "pricing, quotes, plan upgrades, purchasing licenses",
+                    "feature_request": "asking for new capabilities, suggestions, improvements",
+                    "general_inquiry": "general questions, guidance, basic information"
+                }
+            },
+            "difficulty": {
+                "type": "choice",
+                "instructions": "What is the estimated resolution difficulty?",
+                "criteria": {
+                    "quick_fix": "simple answer or standard template, under 10 minutes",
+                    "standard": "requires checking logs or account settings, ~1 hour",
+                    "in_depth": "engineering investigation or financial dispute, 24+ hours"
+                }
             }
         }
 
@@ -268,6 +289,82 @@ class TriageEngine:
             urgency_idx = 0
             urgency_label = "low: routine question"
 
+        # 7. Customer Intent
+        if has_spam:
+            intent_choice = "security_threat"
+            intent_label = "Security Threat"
+        elif has_refund or ("charge" in lower and ("wrong" in lower or "double" in lower)) or "invoice" in lower:
+            intent_choice = "billing_dispute"
+            intent_label = "Billing Dispute / Refund"
+        elif any(w in lower for w in ["password", "login", "locked", "2fa", "sign in", "access my account"]):
+            intent_choice = "account_access"
+            intent_label = "Account Access / Auth"
+        elif any(w in lower for w in ["bug", "crash", "error", "fails", "broken", "outage", "500", "exception"]):
+            intent_choice = "bug_report"
+            intent_label = "Bug Report / Technical Glitch"
+        elif any(w in lower for w in ["feature", "would like", "can you add", "suggestion", "roadmap"]):
+            intent_choice = "feature_request"
+            intent_label = "Feature Request / Suggestion"
+        elif any(w in lower for w in ["pricing", "enterprise", "quote", "demo", "upgrade"]):
+            intent_choice = "sales_inquiry"
+            intent_label = "Sales & Plan Upgrade"
+        else:
+            intent_choice = "general_inquiry"
+            intent_label = "General Inquiry"
+
+        # 8. Resolution Difficulty & Estimated Time
+        if urgency_idx >= 3 or churn_prob >= 0.70 or dept_scores["technical"] > 0.8:
+            difficulty_choice = "in_depth"
+            est_time = "🔥 Deep Investigation (~24h)"
+        elif urgency_idx >= 2 or has_refund or intent_choice in ["bug_report", "billing_dispute"]:
+            difficulty_choice = "standard"
+            est_time = "⏱️ Standard (~1 hour)"
+        else:
+            difficulty_choice = "quick_fix"
+            est_time = "⚡ Quick Fix (< 10 mins)"
+
+        # 9. Smart Specialist Assignment
+        if has_spam:
+            specialist = {"name": "Security Sentinel", "role": "Threat Quarantine AI", "avatar": "🛡️"}
+        elif churn_prob >= 0.70 or frustration_idx >= 3:
+            specialist = {"name": "Elena Rostova", "role": "VIP Retention Lead", "avatar": "👑"}
+        elif has_refund or chosen_dept in ["billing", "cancellation"]:
+            specialist = {"name": "Sarah Jenkins", "role": "Senior Billing Specialist", "avatar": "💳"}
+        elif chosen_dept == "technical" and urgency_idx >= 2:
+            specialist = {"name": "Alex Rivera", "role": "Infrastructure Lead", "avatar": "🛠️"}
+        elif chosen_dept == "technical":
+            specialist = {"name": "David Chen", "role": "Platform Engineer", "avatar": "💻"}
+        elif chosen_dept == "sales":
+            specialist = {"name": "Marcus Vance", "role": "Enterprise Accounts Director", "avatar": "💼"}
+        else:
+            specialist = {"name": "Maya Patel", "role": "Customer Success Specialist", "avatar": "🎧"}
+
+        # 10. Dynamic Action Items Checklist
+        action_items = []
+        if has_spam:
+            action_items.append({"id": 0, "task": "Quarantine suspicious email and block sender domain", "done": True})
+            action_items.append({"id": 1, "task": "Audit recent login sessions for compromised credentials", "done": False})
+        elif has_refund:
+            action_items.append({"id": 0, "task": "Verify transaction ID and charge details in payment gateway", "done": False})
+            action_items.append({"id": 1, "task": "Calculate eligible refund or credit amount", "done": False})
+            action_items.append({"id": 2, "task": "Send receipt of refund to customer", "done": False})
+        elif churn_prob >= 0.70:
+            action_items.append({"id": 0, "task": "Review customer account value and renewal timeline", "done": False})
+            action_items.append({"id": 1, "task": "Formulate special VIP retention offer or courtesy credit", "done": False})
+            action_items.append({"id": 2, "task": "Conduct warm outreach via priority follow-up", "done": False})
+        elif chosen_dept == "technical":
+            action_items.append({"id": 0, "task": "Reproduce reported error and inspect server logs", "done": False})
+            action_items.append({"id": 1, "task": "Check system status and active deployment versions", "done": False})
+            action_items.append({"id": 2, "task": "Provide workaround or patch ETA to customer", "done": False})
+        elif chosen_dept == "sales":
+            action_items.append({"id": 0, "task": "Research customer company profile and seats requirements", "done": False})
+            action_items.append({"id": 1, "task": "Prepare custom tier pricing schedule", "done": False})
+            action_items.append({"id": 2, "task": "Schedule 15-minute product walk-through demo", "done": False})
+        else:
+            action_items.append({"id": 0, "task": "Review customer request and verify account details", "done": False})
+            action_items.append({"id": 1, "task": "Provide helpful guidance with knowledge base links", "done": False})
+            action_items.append({"id": 2, "task": "Confirm customer issue is resolved before closing", "done": False})
+
         return {
             "department": {
                 "type": "choice",
@@ -304,5 +401,15 @@ class TriageEngine:
                 "probability": round(spam_prob, 3),
                 "noul": round(spam_prob, 3),
                 "is_threat": spam_prob >= 0.70
-            }
+            },
+            "intent": {
+                "choice": intent_choice,
+                "label": intent_label
+            },
+            "difficulty": {
+                "choice": difficulty_choice,
+                "estimated_time": est_time
+            },
+            "assigned_specialist": specialist,
+            "action_items": action_items
         }

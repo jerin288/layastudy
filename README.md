@@ -62,6 +62,13 @@ Evaluates customer intent, mood, cancellation risk, and urgency in a **single fo
    - Interactive reply composer pre-populated with the AI's generated response draft.
    - Edit and customize the message on the fly and click **✉️ Send Reply via Gmail** to dispatch directly to the customer via secure Gmail SMTP (`smtp.gmail.com:465`).
    - Automatically marks tickets as solved with live audit tracking.
+9. **Laya AI Action Checklist (Interactive Task Extractor)**:
+   - Evaluates every email and creates an actionable step-by-step resolution checklist.
+   - Clickable checkboxes allow agents to check off tasks in real time as they complete them.
+10. **Specialist Assignment, Intent & 1-Click Quick Actions**:
+   - Routes and assigns tickets to dedicated specialist roles (`VIP Retention Lead`, `Senior Billing Specialist`, `Infrastructure Lead`, `Platform Engineer`).
+   - Detects customer intent (`Billing Dispute`, `Bug Report`, `Account Access`, `Sales`) and predicts estimated resolution time.
+   - Provides 1-Click Quick Action buttons (`💳 Approve Refund`, `⚡ Fast-Track Escalate`, `🔕 Archive Ticket`).
 
 ---
 

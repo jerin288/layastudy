@@ -53,6 +53,18 @@ const inspReplyInput = document.getElementById('insp-reply-input');
 const btnSendReply = document.getElementById('btn-send-reply');
 const replyFeedbackBanner = document.getElementById('reply-feedback-banner');
 
+// Specialist, Intent & Action Checklist Elements
+const inspSpecialistAvatar = document.getElementById('insp-specialist-avatar');
+const inspSpecialistName = document.getElementById('insp-specialist-name');
+const inspSpecialistRole = document.getElementById('insp-specialist-role');
+const inspIntentBadge = document.getElementById('insp-intent-badge');
+const inspDifficultyBadge = document.getElementById('insp-difficulty-badge');
+const inspChecklistProgress = document.getElementById('insp-checklist-progress');
+const inspChecklistItems = document.getElementById('insp-checklist-items');
+const btnQuickRefund = document.getElementById('btn-quick-refund');
+const btnQuickEscalate = document.getElementById('btn-quick-escalate');
+const btnQuickArchive = document.getElementById('btn-quick-archive');
+
 // Modal Elements
 const composeModal = document.getElementById('compose-modal');
 const btnOpenCompose = document.getElementById('btn-open-compose');
@@ -561,6 +573,17 @@ function setupEventListeners() {
       }
     });
   }
+
+  // Quick Action Buttons
+  if (btnQuickRefund) {
+    btnQuickRefund.addEventListener('click', () => executeQuickAction('approve_refund'));
+  }
+  if (btnQuickEscalate) {
+    btnQuickEscalate.addEventListener('click', () => executeQuickAction('fast_track'));
+  }
+  if (btnQuickArchive) {
+    btnQuickArchive.addEventListener('click', () => executeQuickAction('archive'));
+  }
 }
 
 // Update Metrics Bar
@@ -767,6 +790,40 @@ function renderInspector(ticket) {
   // Email Body
   inspBodyText.innerText = ticket.body;
 
+  // Specialist Card
+  const specialist = workflow.assigned_specialist || answers.assigned_specialist || {
+    name: 'Maya Patel', role: 'Customer Success Specialist', avatar: '🎧'
+  };
+  if (inspSpecialistAvatar) inspSpecialistAvatar.innerText = specialist.avatar || '👤';
+  if (inspSpecialistName) inspSpecialistName.innerText = specialist.name || 'Support Agent';
+  if (inspSpecialistRole) inspSpecialistRole.innerText = specialist.role || 'Specialist';
+
+  // Intent & Difficulty Badges
+  const intentObj = workflow.intent || answers.intent || {};
+  const diffObj = workflow.difficulty || answers.difficulty || {};
+  if (inspIntentBadge) {
+    inspIntentBadge.innerText = `🏷️ ${intentObj.label || 'General Inquiry'}`;
+  }
+  if (inspDifficultyBadge) {
+    inspDifficultyBadge.innerText = diffObj.estimated_time || '⏱️ Standard (~1h)';
+  }
+
+  // Quick Action Buttons
+  if (btnQuickRefund) {
+    btnQuickRefund.style.display = (isRefund || (answers.department && answers.department.choice === 'billing')) ? 'inline-block' : 'none';
+    if (workflow.refund_approved) {
+      btnQuickRefund.innerText = '💳 Refund Approved ✓';
+      btnQuickRefund.disabled = true;
+    } else {
+      btnQuickRefund.innerText = '💳 Approve Refund';
+      btnQuickRefund.disabled = false;
+    }
+  }
+
+  // Action Items Checklist
+  const actionItems = workflow.action_items || answers.action_items || [];
+  renderActionChecklist(ticket.id, actionItems);
+
   // Audit Logs
   const logs = workflow.audit_logs || [];
   inspAuditLogs.innerHTML = logs.map(l => `<li>${escapeHtml(l)}</li>`).join('');
@@ -781,6 +838,62 @@ function renderInspector(ticket) {
   }
   btnMarkResolved.innerText = ticket.status === 'Resolved' ? 'Solved ✓' : 'Mark as Solved';
   btnMarkResolved.disabled = ticket.status === 'Resolved';
+}
+
+function renderActionChecklist(ticketId, items) {
+  if (!inspChecklistItems || !inspChecklistProgress) return;
+  const completed = items.filter(it => it.done).length;
+  inspChecklistProgress.innerText = `${completed}/${items.length} Completed`;
+
+  if (items.length === 0) {
+    inspChecklistItems.innerHTML = '<li class="checklist-item" style="cursor: default;"><span class="checklist-text">No pending tasks for this ticket.</span></li>';
+    return;
+  }
+
+  inspChecklistItems.innerHTML = items.map(item => `
+    <li class="checklist-item ${item.done ? 'done' : ''}" onclick="toggleTask('${ticketId}', ${item.id})">
+      <input type="checkbox" class="checklist-checkbox" ${item.done ? 'checked' : ''} onclick="event.stopPropagation(); toggleTask('${ticketId}', ${item.id});" />
+      <span class="checklist-text">${escapeHtml(item.task)}</span>
+    </li>
+  `).join('');
+}
+
+async function toggleTask(ticketId, itemId) {
+  try {
+    const res = await fetch(`/api/tickets/${ticketId}/action`, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ action: 'toggle_task', item_id: itemId })
+    });
+    const data = await res.json();
+    if (res.ok && data.ticket) {
+      const idx = tickets.findIndex(t => t.id === ticketId);
+      if (idx !== -1) tickets[idx] = data.ticket;
+      if (selectedTicketId === ticketId) renderInspector(data.ticket);
+    }
+  } catch (err) {
+    console.error('Failed to toggle task', err);
+  }
+}
+
+async function executeQuickAction(actionType) {
+  if (!selectedTicketId) return;
+  try {
+    const res = await fetch(`/api/tickets/${selectedTicketId}/action`, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ action: actionType })
+    });
+    const data = await res.json();
+    if (res.ok && data.ticket) {
+      const idx = tickets.findIndex(t => t.id === selectedTicketId);
+      if (idx !== -1) tickets[idx] = data.ticket;
+      renderTicketsList();
+      renderInspector(data.ticket);
+    }
+  } catch (err) {
+    console.error('Failed to execute quick action', err);
+  }
 }
 
 function renderStepDots(container, activeIndex, isDanger) {
