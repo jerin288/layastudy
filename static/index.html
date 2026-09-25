@@ -1,0 +1,414 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Smart AI Support Desk - Fast Email Assistant</title>
+  <meta name="description" content="Smart customer support inbox powered by AI. Automatically categorizes incoming emails, spots angry customers, and drafts replies instantly.">
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&family=JetBrains+Mono:wght@400;500;600&family=Outfit:wght@500;600;700&display=swap" rel="stylesheet">
+  <link rel="stylesheet" href="/static/style.css">
+</head>
+<body class="dark-theme">
+
+  <!-- Header & Status Bar -->
+  <header class="app-header">
+    <div class="header-left">
+      <div class="logo-lockup">
+        <div class="logo-orb">
+          <span class="orb-core"></span>
+          <span class="orb-pulse"></span>
+        </div>
+        <div class="logo-text">
+          <h1>Smart Support Desk</h1>
+          <span class="logo-tag">Fast AI Email Assistant</span>
+        </div>
+      </div>
+      <div class="system-badge-container">
+        <span class="status-pill status-live" id="system-status-pill">
+          <span class="status-dot"></span>
+          <span id="system-status-text">AI Ready (~32ms)</span>
+        </span>
+        <span class="model-pill" id="active-model-pill">Multilingual AI</span>
+      </div>
+    </div>
+
+    <div class="header-right">
+      <button class="btn btn-secondary btn-gmail" id="btn-open-gmail" title="Connect your Gmail account">
+        <span class="gmail-dot-pulse hidden" id="gmail-indicator-dot"></span>
+        <span id="gmail-btn-icon">✉️</span>
+        <span id="gmail-btn-text">Connect Gmail</span>
+      </button>
+      <button class="btn btn-outline hidden" id="btn-sync-recent" title="Fetch the latest emails from your Gmail inbox">
+        <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M21.5 2v6h-6M2.5 22v-6h6M2 11.5a10 10 0 0 1 18.8-4.3M22 12.5a10 10 0 0 1-18.8 4.2"/></svg>
+        <span id="sync-recent-btn-text">Sync Recent</span>
+      </button>
+      <button class="btn btn-outline" id="btn-clear-inbox" title="Clear all emails from the screen">
+        <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><polyline points="3 6 5 6 21 6"></polyline><path d="M19 6v14a2 2 0 0 1-2 2H7a2 2 0 0 1-2-2V6m3 0V4a2 2 0 0 1 2-2h4a2 2 0 0 1 2 2v2"></path></svg>
+        <span>Clear Inbox</span>
+      </button>
+      <button class="btn btn-primary" id="btn-open-compose">
+        <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M12 5v14M5 12h14"/></svg>
+        <span>New Test Email</span>
+      </button>
+    </div>
+  </header>
+
+  <!-- Metrics Bar -->
+  <section class="metrics-grid">
+    <div class="metric-card">
+      <div class="metric-header">
+        <span class="metric-title">Total Emails</span>
+        <span class="metric-icon">📥</span>
+      </div>
+      <div class="metric-value" id="stat-total-tickets">0</div>
+      <div class="metric-sub">Processed by AI</div>
+    </div>
+
+    <div class="metric-card alert-card">
+      <div class="metric-header">
+        <span class="metric-title">Unhappy / At-Risk</span>
+        <span class="pulse-warning-dot"></span>
+      </div>
+      <div class="metric-value danger-glow" id="stat-churn-alerts">0</div>
+      <div class="metric-sub">Need immediate care</div>
+    </div>
+
+    <div class="metric-card speed-card">
+      <div class="metric-header">
+        <span class="metric-title">AI Speed</span>
+        <span class="metric-icon">⚡</span>
+      </div>
+      <div class="metric-value accent-glow" id="stat-avg-latency">32.8 ms</div>
+      <div class="metric-sub">Instant response time</div>
+    </div>
+
+    <div class="metric-card">
+      <div class="metric-header">
+        <span class="metric-title">Languages Handled</span>
+        <span class="metric-icon">🌐</span>
+      </div>
+      <div class="metric-value" id="stat-languages-count">All Languages</div>
+      <div class="metric-sub" id="stat-languages-list">English, Spanish, Hindi, etc.</div>
+    </div>
+  </section>
+
+  <!-- Main Workspace -->
+  <main class="workspace-grid">
+    
+    <!-- Left Column: Tickets Queue -->
+    <aside class="tickets-panel">
+      <div class="panel-header">
+        <div class="panel-title-wrap">
+          <h2>Inbox Queue</h2>
+          <span class="counter-badge" id="queue-counter">0</span>
+        </div>
+        <div class="filter-pills">
+          <button class="filter-pill active" data-filter="all">All</button>
+          <button class="filter-pill" data-filter="escalated">🚨 Urgent / At Risk</button>
+          <button class="filter-pill" data-filter="billing">Billing</button>
+          <button class="filter-pill" data-filter="technical">Technical</button>
+        </div>
+      </div>
+
+      <div class="tickets-list" id="tickets-list-container">
+        <!-- Rendered dynamically -->
+        <div class="tickets-loading-shimmer">Loading emails...</div>
+      </div>
+    </aside>
+
+    <!-- Right Column: Detail Inspector -->
+    <section class="inspector-panel" id="inspector-panel">
+      
+      <div class="empty-inspector" id="empty-inspector-state">
+        <div class="empty-icon-ring">🔍</div>
+        <h3>Select an email to view details</h3>
+        <p>Click any email on the left to see the AI analysis, customer mood, urgency level, and ready-to-send draft reply.</p>
+      </div>
+
+      <div class="inspector-content hidden" id="inspector-content">
+        
+        <!-- Ticket Header Bar -->
+        <div class="inspector-top-bar">
+          <div class="ticket-meta">
+            <span class="ticket-id" id="insp-id">EMAIL-XXXX</span>
+            <span class="ticket-queue-badge" id="insp-queue">General Support</span>
+            <span class="ticket-priority-badge" id="insp-priority">Normal</span>
+            <span class="ticket-lang-badge" id="insp-lang">🌐 English</span>
+          </div>
+          <div class="ticket-actions">
+            <button class="btn btn-sm btn-outline" id="btn-mark-resolved">Mark as Solved</button>
+          </div>
+        </div>
+
+        <h3 class="inspector-subject" id="insp-subject">Email Subject</h3>
+        <div class="inspector-sender-row">
+          <div class="inspector-sender" id="insp-sender">From: sender@example.com</div>
+          <div class="inspector-date" id="insp-date">🕒 Just now</div>
+        </div>
+
+        <!-- Automated Alert Banner -->
+        <div class="alert-banner hidden" id="insp-alert-banner">
+          <span class="alert-icon">⚠️</span>
+          <span class="alert-text" id="insp-alert-text">Customer attention alert</span>
+        </div>
+
+        <!-- Decision Engine Breakdown Box -->
+        <div class="laya-decision-card">
+          <div class="laya-decision-header">
+            <div class="badge-laya-brand">
+              <span class="laya-dot"></span>
+              <strong>AI Email Insights</strong>
+            </div>
+            <div class="latency-chip">
+              <span class="zap-icon">⚡</span>
+              <span id="insp-latency">32.4 ms</span>
+              <span class="single-pass-note">Instant AI</span>
+            </div>
+          </div>
+
+          <div class="routing-explanation" id="insp-routing-reason">
+            Language detected &bull; Analyzed instantly
+          </div>
+
+          <!-- Gauges & Metrics Grid -->
+          <div class="decision-gauges-grid">
+            
+            <!-- Department Choice -->
+            <div class="gauge-box">
+              <div class="gauge-label">
+                <span>Department</span>
+                <strong id="insp-dept-val">Billing</strong>
+              </div>
+              <div class="progress-track">
+                <div class="progress-fill" id="insp-dept-bar" style="width: 95%;"></div>
+              </div>
+              <span class="gauge-sub" id="insp-dept-conf">Confidence: 96%</span>
+            </div>
+
+            <!-- Churn Risk Probability -->
+            <div class="gauge-box">
+              <div class="gauge-label">
+                <span>Cancellation Risk</span>
+                <strong class="text-danger" id="insp-churn-val">94%</strong>
+              </div>
+              <div class="progress-track">
+                <div class="progress-fill fill-danger" id="insp-churn-bar" style="width: 94%;"></div>
+              </div>
+              <span class="gauge-sub" id="insp-churn-status">Customer might leave or cancel</span>
+            </div>
+
+            <!-- Frustration Level -->
+            <div class="gauge-box">
+              <div class="gauge-label">
+                <span>Customer Mood</span>
+                <strong id="insp-frust-val">Calm (0/3)</strong>
+              </div>
+              <div class="steps-meter" id="insp-frust-steps">
+                <span class="step-dot active"></span>
+                <span class="step-dot"></span>
+                <span class="step-dot"></span>
+                <span class="step-dot"></span>
+              </div>
+              <span class="gauge-sub" id="insp-frust-desc">Polite and friendly inquiry</span>
+            </div>
+
+            <!-- Urgency Level -->
+            <div class="gauge-box">
+              <div class="gauge-label">
+                <span>Urgency</span>
+                <strong id="insp-urgency-val">Normal (0/3)</strong>
+              </div>
+              <div class="steps-meter" id="insp-urgency-steps">
+                <span class="step-dot active"></span>
+                <span class="step-dot"></span>
+                <span class="step-dot"></span>
+                <span class="step-dot"></span>
+              </div>
+              <span class="gauge-sub" id="insp-urgency-desc">Routine customer question</span>
+            </div>
+
+          </div>
+
+          <!-- Boolean Flags -->
+          <div class="flags-row">
+            <div class="flag-item" id="insp-flag-refund">
+              <span class="flag-icon">💳</span>
+              <span>Refund Requested: <strong id="insp-refund-val">No</strong></span>
+            </div>
+            <div class="flag-item" id="insp-flag-spam">
+              <span class="flag-icon">🛡️</span>
+              <span>Spam / Suspicious: <strong id="insp-spam-val">Safe (1%)</strong></span>
+            </div>
+          </div>
+        </div>
+
+        <!-- Original Inbound Email Body -->
+        <div class="email-body-box">
+          <h4>Customer's Email Message</h4>
+          <div class="email-text-content" id="insp-body-text">
+            Email content will appear here...
+          </div>
+        </div>
+
+        <!-- Automated Action Audit Logs -->
+        <div class="audit-logs-box">
+          <h4>What The AI Did Automatically</h4>
+          <ul class="audit-logs-list" id="insp-audit-logs">
+            <!-- Rendered dynamically -->
+          </ul>
+        </div>
+
+        <!-- AI-Assisted Canned Response Draft -->
+        <div class="suggested-reply-box">
+          <div class="suggested-header">
+            <h4>Suggested Reply Draft</h4>
+            <button class="btn btn-xs btn-outline" id="btn-copy-reply">Copy Reply</button>
+          </div>
+          <pre class="reply-text" id="insp-suggested-reply">Suggested draft will appear here...</pre>
+        </div>
+
+      </div>
+
+    </section>
+
+  </main>
+
+  <!-- Modal: Test New Ticket -->
+  <div class="modal-overlay hidden" id="compose-modal">
+    <div class="modal-dialog">
+      <div class="modal-header">
+        <h3>Send a Test Email</h3>
+        <button class="modal-close" id="btn-close-modal">&times;</button>
+      </div>
+      <div class="modal-body">
+        
+        <form id="compose-form">
+          <div class="form-group">
+            <label for="compose-from">Sender Email Address</label>
+            <input type="email" id="compose-from" value="customer@example.com" required>
+          </div>
+
+          <div class="form-group">
+            <label for="compose-subject">Subject</label>
+            <input type="text" id="compose-subject" placeholder="e.g. Can you help me with my monthly bill?" required>
+          </div>
+
+          <div class="form-group">
+            <label for="compose-body">Message (in any language)</label>
+            <textarea id="compose-body" rows="5" placeholder="Write or paste any customer email here..." required></textarea>
+          </div>
+
+          <div class="modal-footer">
+            <button type="button" class="btn btn-secondary" id="btn-cancel-compose">Cancel</button>
+            <button type="submit" class="btn btn-primary" id="btn-submit-triage">
+              <span>Analyze & Add to Inbox</span>
+            </button>
+          </div>
+        </form>
+
+      </div>
+    </div>
+  </div>
+
+  <!-- Modal: Connect Gmail via IMAP -->
+  <div class="modal-overlay hidden" id="gmail-modal">
+    <div class="modal-dialog">
+      <div class="modal-header">
+        <div class="modal-title-with-icon">
+          <span class="gmail-modal-icon">✉️</span>
+          <div>
+            <h3>Connect Your Gmail Account</h3>
+            <span class="modal-sub">Automatically pulls and sorts your real emails with AI</span>
+          </div>
+        </div>
+        <button class="modal-close" id="btn-close-gmail-modal">&times;</button>
+      </div>
+
+      <div class="modal-body">
+        
+        <!-- Live Connection Status Alert -->
+        <div class="gmail-status-card" id="gmail-status-card">
+          <div class="gmail-status-header">
+            <span class="status-indicator-dot" id="gmail-status-dot"></span>
+            <strong id="gmail-status-heading">Status: Disconnected</strong>
+          </div>
+          <div class="gmail-status-details" id="gmail-status-details">
+            Enter your Gmail address and 16-character App Password to start receiving and sorting emails automatically.
+          </div>
+        </div>
+
+        <!-- Credentials Form -->
+        <form id="gmail-config-form">
+          <div class="form-group">
+            <label for="gmail-email">Gmail Address</label>
+            <input type="email" id="gmail-email" placeholder="your_email@gmail.com" required>
+          </div>
+
+          <div class="form-group">
+            <div class="label-with-link">
+              <label for="gmail-password">Google App Password (16 letters)</label>
+              <a href="https://myaccount.google.com/apppasswords" target="_blank" rel="noopener" class="helper-link">Generate in Google Account ↗</a>
+            </div>
+            <input type="password" id="gmail-password" placeholder="e.g. abcd efgh ijkl mnop" required autocomplete="off">
+            <span class="input-hint">Tip: Use an App Password from your Google Account security page, not your everyday password.</span>
+          </div>
+
+          <div class="form-row-2">
+            <div class="form-group">
+              <label for="gmail-poll-interval">Check For New Emails Every</label>
+              <select id="gmail-poll-interval" class="form-select">
+                <option value="10">Every 10 seconds</option>
+                <option value="15" selected>Every 15 seconds (Recommended)</option>
+                <option value="30">Every 30 seconds</option>
+                <option value="60">Every 60 seconds</option>
+              </select>
+            </div>
+
+            <div class="form-group checkbox-group">
+              <label class="checkbox-label">
+                <input type="checkbox" id="gmail-import-recent" checked>
+                <span>Import my last 10 emails right away</span>
+              </label>
+              <label class="checkbox-label" style="margin-top: 6px;">
+                <input type="checkbox" id="gmail-mark-read" checked>
+                <span>Mark synced emails as read in Gmail</span>
+              </label>
+            </div>
+          </div>
+
+          <!-- Quick Action Bar if connected -->
+          <div class="gmail-action-bar hidden" id="gmail-connected-actions" style="margin-bottom: 14px; padding: 12px 14px; background: rgba(59, 130, 246, 0.08); border: 1px solid rgba(59, 130, 246, 0.2); border-radius: var(--radius-sm); display: flex; align-items: center; justify-content: space-between;">
+            <div>
+              <div style="font-size: 0.85rem; font-weight: 600; color: #93c5fd;">Gmail Connected (<span id="modal-mailbox-count">0</span> emails in inbox)</div>
+              <div style="font-size: 0.75rem; color: var(--text-muted);">Pull the latest emails into this screen right now</div>
+            </div>
+            <button type="button" class="btn btn-sm btn-outline" id="btn-modal-sync-now" style="font-size: 0.75rem; padding: 6px 12px;">
+              <span>📥 Fetch Recent 10 Emails</span>
+            </button>
+          </div>
+
+          <!-- Test Connection Result Banner -->
+          <div class="test-feedback-box hidden" id="gmail-test-feedback"></div>
+
+          <div class="modal-footer modal-footer-split">
+            <button type="button" class="btn btn-outline" id="btn-test-gmail">
+              <span>Test Connection</span>
+            </button>
+            <div class="modal-footer-right">
+              <button type="button" class="btn btn-secondary hidden" id="btn-disconnect-gmail">Disconnect</button>
+              <button type="submit" class="btn btn-primary" id="btn-start-gmail-sync">
+                <span>Start Live Sync</span>
+              </button>
+            </div>
+          </div>
+        </form>
+
+      </div>
+    </div>
+  </div>
+
+  <script src="/static/app.js"></script>
+</body>
+</html>

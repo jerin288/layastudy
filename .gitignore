@@ -1,0 +1,28 @@
+# Python Virtual Environments
+.venv/
+venv/
+ENV/
+env/
+
+# Python Cache & Bytecode
+__pycache__/
+*.py[cod]
+*$py.class
+*.so
+.pytest_cache/
+
+# Environment Variables & Secrets
+.env
+.env.local
+*.pem
+
+# IDE & Editor Configuration
+.vscode/
+.idea/
+*.swp
+*~
+
+# Operating System Files
+Thumbs.db
+[Dd]esktop.ini
+.DS_Store
