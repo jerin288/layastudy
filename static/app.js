@@ -135,19 +135,25 @@ function setupWebSocket() {
           selectTicket(tickets[0].id);
         }
       } else if (data.type === 'NEW_TICKET') {
-        tickets.unshift(data.ticket);
-        tickets.sort((a, b) => (b.created_at || 0) - (a.created_at || 0));
+        const exists = tickets.some(t => t.id === data.ticket.id);
+        if (!exists) {
+          tickets.unshift(data.ticket);
+          tickets.sort((a, b) => (b.created_at || 0) - (a.created_at || 0));
+        }
         updateStats(data.stats);
         if (data.gmail_status) updateGmailUI(data.gmail_status);
         renderTicketsList();
-        selectTicket(data.ticket.id);
+        // NEVER switch away if user has already selected an email
+        if (!selectedTicketId) {
+          selectTicket(data.ticket.id);
+        }
       } else if (data.type === 'TICKET_UPDATED') {
         const idx = tickets.findIndex(t => t.id === data.ticket.id);
         if (idx !== -1) {
           tickets[idx] = data.ticket;
           renderTicketsList();
           if (selectedTicketId === data.ticket.id) {
-            renderInspector(data.ticket);
+            renderInspector(data.ticket, true);
           }
         }
       } else if (data.type === 'GMAIL_STATUS_CHANGED') {
@@ -630,6 +636,7 @@ function formatDateTime(timestamp) {
 
 // Render Tickets Queue
 function renderTicketsList() {
+  const prevScroll = ticketsListContainer ? ticketsListContainer.scrollTop : 0;
   let filtered = [...tickets];
   // Strict descending sort: newest items at the very top, older items down
   filtered.sort((a, b) => (b.created_at || 0) - (a.created_at || 0));
@@ -665,7 +672,7 @@ function renderTicketsList() {
     const isActive = t.id === selectedTicketId;
 
     return `
-      <div class="ticket-item ${isActive ? 'active' : ''}" onclick="selectTicket('${t.id}')">
+      <div class="ticket-item ${isActive ? 'active' : ''}" data-id="${t.id}" onclick="selectTicket('${t.id}')">
         <div class="ticket-item-top">
           <span class="ticket-item-id">${t.id}</span>
           <div class="ticket-item-badges">
@@ -684,20 +691,41 @@ function renderTicketsList() {
       </div>
     `;
   }).join('');
+
+  if (ticketsListContainer) {
+    ticketsListContainer.scrollTop = prevScroll;
+  }
+}
+
+// Update active highlight smoothly without re-rendering entire queue
+function updateActiveTicketItem(ticketId) {
+  if (!ticketsListContainer) return;
+  const items = ticketsListContainer.querySelectorAll('.ticket-item');
+  items.forEach(item => {
+    if (item.dataset.id === ticketId) {
+      item.classList.add('active');
+    } else {
+      item.classList.remove('active');
+    }
+  });
 }
 
 // Select Ticket
-function selectTicket(ticketId) {
+function selectTicket(ticketId, force = false) {
+  if (!force && selectedTicketId === ticketId) {
+    // If this mail is already open, do not re-render or reset the main window
+    return;
+  }
   selectedTicketId = ticketId;
   const ticket = tickets.find(t => t.id === ticketId);
   if (!ticket) return;
 
-  renderTicketsList();
-  renderInspector(ticket);
+  updateActiveTicketItem(ticketId);
+  renderInspector(ticket, false);
 }
 
 // Render Inspector Detail
-function renderInspector(ticket) {
+function renderInspector(ticket, isUpdate = false) {
   emptyInspectorState.classList.add('hidden');
   inspectorContent.classList.remove('hidden');
 
@@ -830,9 +858,13 @@ function renderInspector(ticket) {
 
   // Suggested Reply Composer
   if (inspReplyInput) {
-    inspReplyInput.value = workflow.suggested_reply || '';
+    if (!isUpdate || document.activeElement !== inspReplyInput) {
+      if (!isUpdate || !inspReplyInput.value) {
+        inspReplyInput.value = workflow.suggested_reply || '';
+      }
+    }
   }
-  if (replyFeedbackBanner) {
+  if (!isUpdate && replyFeedbackBanner) {
     replyFeedbackBanner.className = 'hidden';
     replyFeedbackBanner.innerText = '';
   }
