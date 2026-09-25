@@ -49,7 +49,9 @@ const inspRefundVal = document.getElementById('insp-refund-val');
 const inspSpamVal = document.getElementById('insp-spam-val');
 const inspBodyText = document.getElementById('insp-body-text');
 const inspAuditLogs = document.getElementById('insp-audit-logs');
-const inspSuggestedReply = document.getElementById('insp-suggested-reply');
+const inspReplyInput = document.getElementById('insp-reply-input');
+const btnSendReply = document.getElementById('btn-send-reply');
+const replyFeedbackBanner = document.getElementById('reply-feedback-banner');
 
 // Modal Elements
 const composeModal = document.getElementById('compose-modal');
@@ -497,11 +499,68 @@ function setupEventListeners() {
   });
 
   // Copy Suggested Reply
-  btnCopyReply.addEventListener('click', () => {
-    navigator.clipboard.writeText(inspSuggestedReply.innerText);
-    btnCopyReply.innerText = 'Copied!';
-    setTimeout(() => { btnCopyReply.innerText = 'Copy Reply'; }, 2000);
-  });
+  if (btnCopyReply) {
+    btnCopyReply.addEventListener('click', () => {
+      const textToCopy = inspReplyInput ? inspReplyInput.value : '';
+      navigator.clipboard.writeText(textToCopy);
+      btnCopyReply.innerText = 'Copied!';
+      setTimeout(() => { btnCopyReply.innerText = '📋 Copy'; }, 2000);
+    });
+  }
+
+  // Send Reply via Gmail
+  if (btnSendReply) {
+    btnSendReply.addEventListener('click', async () => {
+      if (!selectedTicketId) return;
+      const text = inspReplyInput ? inspReplyInput.value.trim() : '';
+      if (!text) {
+        alert('Please enter a reply message before sending.');
+        return;
+      }
+
+      btnSendReply.disabled = true;
+      btnSendReply.innerHTML = '<span>⏳ Sending via Gmail...</span>';
+      if (replyFeedbackBanner) {
+        replyFeedbackBanner.className = 'reply-feedback-banner hidden';
+      }
+
+      try {
+        const res = await fetch(`/api/tickets/${selectedTicketId}/reply`, {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ body: text })
+        });
+        const data = await res.json();
+        if (res.ok && data.success) {
+          if (replyFeedbackBanner) {
+            replyFeedbackBanner.className = 'reply-feedback-banner reply-feedback-success';
+            replyFeedbackBanner.innerText = `✉️ Reply sent successfully via Gmail! Ticket marked as solved.`;
+          }
+          btnMarkResolved.innerText = 'Solved ✓';
+          btnMarkResolved.disabled = true;
+          // Update ticket status in local state
+          const ticket = tickets.find(t => t.id === selectedTicketId);
+          if (ticket) {
+            ticket.status = 'Resolved';
+            renderTicketsList();
+          }
+        } else {
+          if (replyFeedbackBanner) {
+            replyFeedbackBanner.className = 'reply-feedback-banner reply-feedback-error';
+            replyFeedbackBanner.innerText = `❌ ${data.detail || data.message || 'Failed to send reply'}`;
+          }
+        }
+      } catch (err) {
+        if (replyFeedbackBanner) {
+          replyFeedbackBanner.className = 'reply-feedback-banner reply-feedback-error';
+          replyFeedbackBanner.innerText = `❌ Error sending reply: ${err.message}`;
+        }
+      } finally {
+        btnSendReply.disabled = false;
+        btnSendReply.innerHTML = '<span>✉️ Send Reply via Gmail</span>';
+      }
+    });
+  }
 }
 
 // Update Metrics Bar
@@ -712,8 +771,14 @@ function renderInspector(ticket) {
   const logs = workflow.audit_logs || [];
   inspAuditLogs.innerHTML = logs.map(l => `<li>${escapeHtml(l)}</li>`).join('');
 
-  // Suggested Reply
-  inspSuggestedReply.innerText = workflow.suggested_reply || 'No draft generated.';
+  // Suggested Reply Composer
+  if (inspReplyInput) {
+    inspReplyInput.value = workflow.suggested_reply || '';
+  }
+  if (replyFeedbackBanner) {
+    replyFeedbackBanner.className = 'hidden';
+    replyFeedbackBanner.innerText = '';
+  }
   btnMarkResolved.innerText = ticket.status === 'Resolved' ? 'Solved ✓' : 'Mark as Solved';
   btnMarkResolved.disabled = ticket.status === 'Resolved';
 }

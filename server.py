@@ -78,6 +78,9 @@ class NewTicketRequest(BaseModel):
 class StatusUpdateRequest(BaseModel):
     status: str
 
+class SendReplyRequest(BaseModel):
+    body: str
+
 class GmailConnectRequest(BaseModel):
     email: str
     app_password: str
@@ -154,6 +157,42 @@ async def update_status(ticket_id: str, req: StatusUpdateRequest):
         "stats": ticket_store.get_stats()
     })
     return ticket
+
+@app.post("/api/tickets/{ticket_id}/reply")
+async def send_ticket_reply(ticket_id: str, req: SendReplyRequest):
+    ticket = ticket_store.get_by_id(ticket_id)
+    if not ticket:
+        raise HTTPException(status_code=404, detail="Ticket not found")
+
+    to_email = ticket.get("from", "").strip()
+    if not to_email:
+        raise HTTPException(status_code=400, detail="Cannot send reply: customer email address is missing.")
+
+    if not (gmail_service.email and gmail_service.app_password):
+        raise HTTPException(status_code=400, detail="Gmail is not connected. Please connect your Gmail account in the top-right header.")
+
+    loop = asyncio.get_running_loop()
+    subject = ticket.get("subject", "Customer Inquiry")
+    res = await loop.run_in_executor(
+        None,
+        lambda: gmail_service.send_email_sync(to_email=to_email, subject=subject, body=req.body)
+    )
+
+    if res.get("success"):
+        # Resolve ticket and log the sent action
+        ticket["status"] = "Resolved"
+        ticket_wf = ticket.setdefault("workflow", {})
+        audit_logs = ticket_wf.setdefault("audit_logs", [])
+        audit_logs.append(f"✉️ Reply sent directly to {res.get('to', to_email)} via Gmail ({time.strftime('%I:%M %p')})")
+
+        await manager.broadcast({
+            "type": "TICKET_UPDATED",
+            "ticket": ticket,
+            "stats": ticket_store.get_stats()
+        })
+        return res
+    else:
+        raise HTTPException(status_code=500, detail=res.get("message", "Failed to send email."))
 
 @app.delete("/api/tickets")
 async def clear_tickets():

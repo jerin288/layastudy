@@ -260,13 +260,23 @@
           </ul>
         </div>
 
-        <!-- AI-Assisted Canned Response Draft -->
+        <!-- AI-Assisted Reply Composer & Gmail Sender -->
         <div class="suggested-reply-box">
           <div class="suggested-header">
-            <h4>Suggested Reply Draft</h4>
-            <button class="btn btn-xs btn-outline" id="btn-copy-reply">Copy Reply</button>
+            <div class="suggested-title-wrap">
+              <h4>AI-Assisted Reply Composer</h4>
+              <span class="ai-draft-badge">Auto-Drafted</span>
+            </div>
+            <button class="btn btn-xs btn-outline" id="btn-copy-reply" title="Copy text to clipboard">📋 Copy</button>
           </div>
-          <pre class="reply-text" id="insp-suggested-reply">Suggested draft will appear here...</pre>
+          <textarea class="reply-textarea" id="insp-reply-input" placeholder="AI draft will appear here. You can edit this message before sending..."></textarea>
+          <div class="reply-footer">
+            <span class="reply-hint">💡 You can edit this reply before sending directly to the customer.</span>
+            <button class="btn btn-sm btn-send-reply" id="btn-send-reply">
+              <span>✉️ Send Reply via Gmail</span>
+            </button>
+          </div>
+          <div id="reply-feedback-banner" class="hidden"></div>
         </div>
 
       </div>

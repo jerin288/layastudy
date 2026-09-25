@@ -58,6 +58,10 @@ Evaluates customer intent, mood, cancellation risk, and urgency in a **single fo
 7. **Live Glassmorphic Dashboard**:
    - Real-time WebSockets feed incoming tickets to the dashboard without page refreshes.
    - Visual progress gauges, customer mood thermometers, and queue filter tabs (`All`, `Urgent / At Risk`, `Billing`, `Technical`).
+8. **1-Click Direct Reply via Gmail (Two-Way Communication)**:
+   - Interactive reply composer pre-populated with the AI's generated response draft.
+   - Edit and customize the message on the fly and click **✉️ Send Reply via Gmail** to dispatch directly to the customer via secure Gmail SMTP (`smtp.gmail.com:465`).
+   - Automatically marks tickets as solved with live audit tracking.
 
 ---
 

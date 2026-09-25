@@ -838,12 +838,13 @@ body.dark-theme {
   border-left: 2px solid var(--accent-primary);
 }
 
-/* Suggested Reply */
+/* Interactive Suggested Reply Composer */
 .suggested-reply-box {
-  background: rgba(99, 102, 241, 0.05);
-  border: 1px solid rgba(99, 102, 241, 0.2);
+  background: rgba(99, 102, 241, 0.06);
+  border: 1px solid rgba(99, 102, 241, 0.25);
   border-radius: var(--radius-md);
   padding: 16px;
+  position: relative;
 }
 
 .suggested-header {
@@ -853,22 +854,108 @@ body.dark-theme {
   margin-bottom: 10px;
 }
 
+.suggested-title-wrap {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+
 .suggested-header h4 {
   font-size: 0.82rem;
   color: #A5B4FC;
   text-transform: uppercase;
   letter-spacing: 0.04em;
+  font-weight: 600;
 }
 
-.reply-text {
+.ai-draft-badge {
+  font-size: 0.68rem;
+  background: rgba(99, 102, 241, 0.2);
+  color: #C7D2FE;
+  padding: 2px 7px;
+  border-radius: 4px;
+  font-weight: 500;
+}
+
+.reply-textarea {
+  width: 100%;
+  box-sizing: border-box;
+  background: rgba(15, 23, 42, 0.7);
+  border: 1px solid rgba(99, 102, 241, 0.3);
+  border-radius: 8px;
+  padding: 12px 14px;
+  color: #F8FAFC;
   font-family: var(--font-main);
-  font-size: 0.84rem;
-  line-height: 1.5;
-  color: #E2E8F0;
-  white-space: pre-wrap;
-  background: rgba(0, 0, 0, 0.25);
-  padding: 12px;
+  font-size: 0.86rem;
+  line-height: 1.55;
+  resize: vertical;
+  min-height: 110px;
+  transition: border-color 0.2s, box-shadow 0.2s;
+  outline: none;
+}
+
+.reply-textarea:focus {
+  border-color: #818CF8;
+  box-shadow: 0 0 0 3px rgba(99, 102, 241, 0.2);
+}
+
+.reply-footer {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  margin-top: 10px;
+  flex-wrap: wrap;
+  gap: 8px;
+}
+
+.reply-hint {
+  font-size: 0.75rem;
+  color: var(--text-muted);
+}
+
+.btn-send-reply {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  background: linear-gradient(135deg, #4F46E5 0%, #3B82F6 100%);
+  color: white;
+  border: none;
+  font-weight: 600;
+  box-shadow: 0 4px 12px rgba(79, 70, 229, 0.3);
+  transition: all 0.2s ease;
+}
+
+.btn-send-reply:hover:not(:disabled) {
+  transform: translateY(-1px);
+  box-shadow: 0 6px 16px rgba(79, 70, 229, 0.45);
+}
+
+.btn-send-reply:disabled {
+  opacity: 0.6;
+  cursor: not-allowed;
+}
+
+.reply-feedback-banner {
+  margin-top: 10px;
+  padding: 8px 12px;
   border-radius: 6px;
+  font-size: 0.8rem;
+  font-weight: 500;
+  display: flex;
+  align-items: center;
+  gap: 6px;
+}
+
+.reply-feedback-success {
+  background: rgba(16, 185, 129, 0.15);
+  border: 1px solid rgba(16, 185, 129, 0.35);
+  color: #6EE7B7;
+}
+
+.reply-feedback-error {
+  background: rgba(244, 63, 94, 0.15);
+  border: 1px solid rgba(244, 63, 94, 0.35);
+  color: #FDA4AF;
 }
 
 /* Modal Dialog */

@@ -9,8 +9,10 @@ import html
 import imaplib
 import os
 import re
+import smtplib
 import time
 from email.header import decode_header
+from email.mime.text import MIMEText
 from typing import Optional, Dict, Any, Callable, List
 
 
@@ -393,3 +395,45 @@ class GmailService:
             "last_error": self.last_error,
             "total_mailbox_count": self.total_mailbox_count
         }
+
+    def send_email_sync(self, to_email: str, subject: str, body: str, in_reply_to: Optional[str] = None) -> Dict[str, Any]:
+        """Sends an email synchronously via Gmail SMTP (smtp.gmail.com:465 SSL)."""
+        if not self.email or not self.app_password:
+            return {
+                "success": False,
+                "message": "Gmail is not connected. Please connect Gmail first via the header button."
+            }
+
+        clean_to = to_email.strip()
+        # If to_email is in "Name <email@domain>" format, extract the actual email
+        email_match = re.search(r"[\w\.-]+@[\w\.-]+\.\w+", clean_to)
+        if email_match:
+            clean_to = email_match.group(0)
+
+        # Build clean Re: subject
+        clean_subj = subject.strip()
+        if not clean_subj.lower().startswith("re:"):
+            clean_subj = f"Re: {clean_subj}"
+
+        msg = MIMEText(body, "plain", "utf-8")
+        msg["From"] = self.email
+        msg["To"] = clean_to
+        msg["Subject"] = clean_subj
+        if in_reply_to:
+            msg["In-Reply-To"] = in_reply_to
+            msg["References"] = in_reply_to
+
+        try:
+            with smtplib.SMTP_SSL("smtp.gmail.com", 465, timeout=15) as server:
+                server.login(self.email, self.app_password)
+                server.send_message(msg)
+            return {
+                "success": True,
+                "message": f"Reply successfully sent to {clean_to} via your Gmail account!",
+                "to": clean_to,
+                "subject": clean_subj
+            }
+        except smtplib.SMTPAuthenticationError as e:
+            return {"success": False, "message": f"SMTP Authentication failed: {str(e)}"}
+        except Exception as e:
+            return {"success": False, "message": f"Failed to send email: {str(e)}"}
